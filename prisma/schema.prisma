@@ -4,19 +4,19 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("postgresql://profitbliss_org_user:glonHle5f3TkWqaoWFBA1cOChlXAvs8U@dpg-d36jokqdbo4c73dseb20-a/profitbliss_org")
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  country   String
-  phone     String
-  wallet    Wallet?
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  name        String
+  country     String
+  phone       String
+  wallet      Wallet?
   investments Investment[]
-  createdAt DateTime @default(now())
+  createdAt   DateTime      @default(now())
 }
 
 model Wallet {
@@ -27,24 +27,19 @@ model Wallet {
 }
 
 model InvestmentPlan {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String        @id @default(uuid())
+  name        String        @unique
   description String?
   minAmount   Float
   roi         Float
   duration    Int
   investments Investment[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
 }
 
 model Investment {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   amount    Float
-  status    String   @default("active")
-  startDate DateTime @default(now())
-  endDate   DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  planId    String
-  plan      InvestmentPlan @relation(fields: [planId], references: [id])
-}
+  status    String          @default("active")
+  startDate DateTime        @default(now())
+  endDate
