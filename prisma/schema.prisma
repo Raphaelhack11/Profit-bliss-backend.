@@ -42,4 +42,9 @@ model Investment {
   amount    Float
   status    String          @default("active")
   startDate DateTime        @default(now())
-  endDate
+  endDate   DateTime
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  planId    String
+  plan      InvestmentPlan  @relation(fields: [planId], references: [id])
+}
