@@ -1,22 +1,14 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id          String        @id @default(uuid())
-  email       String        @unique
-  password    String
-  name        String
-  country     String
-  phone       String
-  wallet      Wallet?
-  investments Investment[]
-  createdAt   DateTime      @default(now())
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String
+  name          String
+  country       String
+  phone         String
+  wallet        Wallet?
+  investments   Investment[]
+  transactions  Transaction[]   // ✅ add this for the relation
+  createdAt     DateTime      @default(now())
 }
 
 model Wallet {
@@ -53,12 +45,22 @@ model Transaction {
   id        String   @id @default(uuid())
   type      String   // "deposit" or "withdraw"
   amount    Float
-  method    String   // Bitcoin, Ethereum, USDT
-  address   String?  // for withdrawals: user’s wallet address
-  status    String   @default("pending") // pending, approved, rejected
+  status    String   @default("pending")
   createdAt DateTime @default(now())
-
-  // relations
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])  // ✅ correct relation
+}
+model User {
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  name        String
+  country     String
+  phone       String
+  wallet      Wallet?
+  investments Investment[]
+  transactions Transaction[]   // 👈 also add relation back
+  isAdmin     Boolean       @default(false) // 👈 new field
+  createdAt   DateTime      @default(now())
 }
