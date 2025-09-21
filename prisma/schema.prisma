@@ -48,3 +48,17 @@ model Investment {
   planId    String
   plan      InvestmentPlan  @relation(fields: [planId], references: [id])
 }
+
+model Transaction {
+  id        String   @id @default(uuid())
+  type      String   // "deposit" or "withdraw"
+  amount    Float
+  method    String   // Bitcoin, Ethereum, USDT
+  address   String?  // for withdrawals: user’s wallet address
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+
+  // relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
