@@ -1,4 +1,4 @@
-import express from "express"
+import transactionsRouter from "./routes/transactions.js";
 import cors from "cors"
 import dotenv from "dotenv"
 import cron from "node-cron"
@@ -22,6 +22,7 @@ app.use("/auth", authRoutes)
 app.use("/wallet", walletRoutes)
 app.use("/plans", planRoutes)
 app.use("/investments", investmentRoutes)
+app.use("/transactions", transactionsRouter);import express from "express"
 
 // Cron job: runs daily at midnight
 cron.schedule("0 0 * * *", async () => {
