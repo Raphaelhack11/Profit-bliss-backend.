@@ -1,8 +1,7 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
-import authMiddleware from "../middleware/auth.js"; // adjust path if different
+import prisma from "../prismaClient.js"; // adjust if your client is named differently
+import authMiddleware from "../middleware/auth.js"; // assumes you already protect routes with JWT
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // Create a deposit request
@@ -10,23 +9,24 @@ router.post("/deposit", authMiddleware, async (req, res) => {
   try {
     const { amount, method } = req.body;
 
-    if (!amount || !method) {
-      return res.status(400).json({ error: "Amount and method required" });
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
     }
 
+    // create a transaction
     const tx = await prisma.transaction.create({
       data: {
         type: "deposit",
-        amount: parseFloat(amount),
+        amount,
         method,
         status: "pending",
         userId: req.user.id,
       },
     });
 
-    res.json(tx);
+    res.json({ success: true, transaction: tx });
   } catch (err) {
-    console.error(err);
+    console.error("Deposit error:", err);
     res.status(500).json({ error: "Deposit failed" });
   }
 });
@@ -36,13 +36,11 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     const { amount, method, walletAddress } = req.body;
 
-    if (!amount || !method || !walletAddress) {
-      return res
-        .status(400)
-        .json({ error: "Amount, method, and walletAddress required" });
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
     }
 
-    // Check user balance
+    // check wallet balance
     const wallet = await prisma.wallet.findUnique({
       where: { userId: req.user.id },
     });
@@ -51,40 +49,42 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance" });
     }
 
+    // subtract from wallet balance immediately
+    await prisma.wallet.update({
+      where: { userId: req.user.id },
+      data: { balance: { decrement: amount } },
+    });
+
+    // create transaction
     const tx = await prisma.transaction.create({
       data: {
         type: "withdraw",
-        amount: parseFloat(amount),
+        amount,
         method,
-        address: walletAddress,
+        walletAddress,
         status: "pending",
         userId: req.user.id,
       },
     });
 
-    // Optionally, lock the funds (subtract now, restore if rejected)
-    await prisma.wallet.update({
-      where: { userId: req.user.id },
-      data: { balance: { decrement: parseFloat(amount) } },
-    });
-
-    res.json(tx);
+    res.json({ success: true, transaction: tx });
   } catch (err) {
-    console.error(err);
+    console.error("Withdraw error:", err);
     res.status(500).json({ error: "Withdraw failed" });
   }
 });
 
-// Get all user transactions
+// Get all transactions for logged-in user
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const txs = await prisma.transaction.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: "desc" },
     });
+
     res.json(txs);
   } catch (err) {
-    console.error(err);
+    console.error("Fetch transactions error:", err);
     res.status(500).json({ error: "Failed to fetch transactions" });
   }
 });
