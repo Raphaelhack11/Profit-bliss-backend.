@@ -1,9 +1,6 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
-import jwt from "jsonwebtoken";
-
-const router = express.Router();
-const prisma = new PrismaClient();
+import prisma from "../prismaClient.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -16,11 +13,10 @@ router.post("/deposit", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
-    // create a transaction
     const tx = await prisma.transaction.create({
       data: {
         type: "deposit",
-        amount,
+        amount: parseFloat(amount),
         method,
         status: "pending",
         userId: req.user.id,
@@ -43,7 +39,6 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
-    // check wallet balance
     const wallet = await prisma.wallet.findUnique({
       where: { userId: req.user.id },
     });
@@ -52,17 +47,15 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Insufficient balance" });
     }
 
-    // subtract from wallet balance immediately
     await prisma.wallet.update({
       where: { userId: req.user.id },
-      data: { balance: { decrement: amount } },
+      data: { balance: { decrement: parseFloat(amount) } },
     });
 
-    // create transaction
     const tx = await prisma.transaction.create({
       data: {
         type: "withdraw",
-        amount,
+        amount: parseFloat(amount),
         method,
         walletAddress,
         status: "pending",
