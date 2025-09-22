@@ -1,6 +1,9 @@
 import express from "express";
-import prisma from "../prismaClient.js"; // adjust if your client is named differently
-import authMiddleware from "../middleware/auth.js"; // assumes you already protect routes with JWT
+import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
+
+const router = express.Router();
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
