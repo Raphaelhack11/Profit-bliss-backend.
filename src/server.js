@@ -1,69 +1,94 @@
 // src/server.js
 import express from "express";
 import cors from "cors";
-import morgan from "morgan";
 import dotenv from "dotenv";
 import cron from "node-cron";
-import prisma from "./prismaClient.js";
+import { PrismaClient } from "@prisma/client";
 
-// Load .env
+// Import routes
+import authRoutes from "./routes/auth.js";
+import planRoutes from "./routes/plans.js";
+import investmentRoutes from "./routes/investments.js";
+import transactionRoutes from "./routes/transactions.js";
+
 dotenv.config();
 
 const app = express();
+const prisma = new PrismaClient();
+
+// Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(morgan("dev"));
 
-// ===== Routes =====
-import authRoutes from "./routes/auth.js";
-import planRoutes from "./routes/plans.js";
-import transactionRoutes from "./routes/transactions.js";
-
+// Routes
 app.use("/auth", authRoutes);
 app.use("/plans", planRoutes);
+app.use("/investments", investmentRoutes);
 app.use("/transactions", transactionRoutes);
 
-// ===== Health Check =====
+// Health check route
 app.get("/", (req, res) => {
-  res.json({ status: "✅ API running" });
+  res.send("✅ Profit Bliss API is running...");
 });
 
-// ===== Cron Jobs =====
-// Runs every day at midnight
-cron.schedule("0 0 * * *", async () => {
-  console.log("⏰ Running daily investment maturity check...");
-  const now = new Date();
+/* ----------------- CRON JOBS ----------------- */
 
+// 1. Auto-complete matured investments daily at midnight
+cron.schedule("0 0 * * *", async () => {
+  console.log("⏳ Running daily investment maturity check...");
   try {
+    const now = new Date();
+
     const matured = await prisma.investment.findMany({
       where: {
-        endDate: { lte: now },
         status: "active",
+        endDate: { lte: now },
       },
-      include: { user: true, plan: true },
+      include: { plan: true, user: { include: { wallet: true } } },
     });
 
     for (const inv of matured) {
       const profit = (inv.amount * inv.plan.roi) / 100;
-
       await prisma.wallet.update({
         where: { userId: inv.userId },
-        data: { balance: { increment: inv.amount + profit } },
+        data: { balance: inv.user.wallet.balance + inv.amount + profit },
       });
 
       await prisma.investment.update({
         where: { id: inv.id },
         data: { status: "completed" },
       });
-
-      console.log(`💰 Credited ${inv.amount + profit} to ${inv.user.email}`);
     }
+
+    console.log(`✅ Processed ${matured.length} matured investments.`);
   } catch (err) {
-    console.error("❌ Cron job failed:", err.message);
+    console.error("❌ Error in maturity cron job:", err);
   }
 });
 
-// ===== Start Server =====
+// 2. Auto-expire deposits & withdrawals after 1 hour
+cron.schedule("*/10 * * * *", async () => {
+  console.log("⏳ Checking for expired transactions...");
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    const expired = await prisma.transaction.updateMany({
+      where: {
+        status: "pending",
+        createdAt: { lte: oneHourAgo },
+      },
+      data: { status: "expired" },
+    });
+
+    if (expired.count > 0) {
+      console.log(`⚠️ Auto-expired ${expired.count} old transactions.`);
+    }
+  } catch (err) {
+    console.error("❌ Error in transaction expiry cron job:", err);
+  }
+});
+/* --------------------------------------------- */
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
