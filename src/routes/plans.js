@@ -1,5 +1,6 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
+import { authenticateToken as authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -10,21 +11,21 @@ router.get("/", async (req, res) => {
     const plans = await prisma.investmentPlan.findMany();
     res.json(plans);
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching plans:", err);
     res.status(500).json({ error: "Failed to fetch plans" });
   }
 });
 
-// Create a new plan (admin only ideally)
-router.post("/", async (req, res) => {
+// Protected: create new plan (only for admins later)
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { name, description, minAmount, roi, duration } = req.body;
+    const { name, minAmount, roi, duration } = req.body;
     const plan = await prisma.investmentPlan.create({
-      data: { name, description, minAmount, roi, duration },
+      data: { name, minAmount, roi, duration },
     });
     res.json(plan);
   } catch (err) {
-    console.error(err);
+    console.error("Error creating plan:", err);
     res.status(500).json({ error: "Failed to create plan" });
   }
 });
