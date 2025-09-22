@@ -1,14 +1,14 @@
 model User {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  password      String
-  name          String
-  country       String
-  phone         String
-  wallet        Wallet?
-  investments   Investment[]
-  transactions  Transaction[]   // ✅ add this for the relation
-  createdAt     DateTime      @default(now())
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  name        String
+  country     String
+  phone       String
+  wallet      Wallet?
+  investments Investment[]
+  transactions Transaction[]   // 👈 add this line
+  createdAt   DateTime      @default(now())
 }
 
 model Wallet {
@@ -42,25 +42,13 @@ model Investment {
 }
 
 model Transaction {
-  id        String   @id @default(uuid())
-  type      String   // "deposit" or "withdraw"
-  amount    Float
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])  // ✅ correct relation
-}
-model User {
-  id          String        @id @default(uuid())
-  email       String        @unique
-  password    String
-  name        String
-  country     String
-  phone       String
-  wallet      Wallet?
-  investments Investment[]
-  transactions Transaction[]   // 👈 also add relation back
-  isAdmin     Boolean       @default(false) // 👈 new field
-  createdAt   DateTime      @default(now())
+  id           String   @id @default(uuid())
+  type         String   // "deposit" or "withdraw"
+  amount       Float
+  method       String
+  status       String   @default("pending")
+  walletAddress String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id]) // ✅ link back to User
+  createdAt    DateTime @default(now())
 }
