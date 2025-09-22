@@ -1,8 +1,9 @@
 import express from "express";
-import prisma from "../prismaClient.js";
-import { authMiddleware } from "../middleware/auth.js";
+import { PrismaClient } from "@prisma/client";
+import { authenticateToken as authMiddleware } from "../middleware/auth.js"; // 👈 alias here
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 // Create a deposit request
 router.post("/deposit", authMiddleware, async (req, res) => {
@@ -16,7 +17,7 @@ router.post("/deposit", authMiddleware, async (req, res) => {
     const tx = await prisma.transaction.create({
       data: {
         type: "deposit",
-        amount: parseFloat(amount),
+        amount,
         method,
         status: "pending",
         userId: req.user.id,
@@ -49,13 +50,13 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
 
     await prisma.wallet.update({
       where: { userId: req.user.id },
-      data: { balance: { decrement: parseFloat(amount) } },
+      data: { balance: { decrement: amount } },
     });
 
     const tx = await prisma.transaction.create({
       data: {
         type: "withdraw",
-        amount: parseFloat(amount),
+        amount,
         method,
         walletAddress,
         status: "pending",
