@@ -42,7 +42,7 @@ async function main() {
 
   // Default Admin User
   const adminEmail = "admin@profitbliss.com";
-  const adminPassword = "Admin123"; // You can change this later
+  const adminPassword = "Admin123"; // Change later in production
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
   const adminUser = await prisma.user.upsert({
