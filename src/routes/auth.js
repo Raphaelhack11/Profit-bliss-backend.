@@ -3,41 +3,86 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
-router.post("/signup", async (req, res) => {
+// --- Register ---
+router.post("/register", async (req, res) => {
   try {
-    const { email, password, name, country, phone } = req.body;
+    const { name, email, password, country, phone } = req.body;
 
+    // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(400).json({ error: "Email already exists" });
+    if (existing) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
       data: {
+        name,
         email,
         password: hashedPassword,
-        name,
         country,
         phone,
-        wallet: { create: { balance: 0 } }, // ✅ Always create wallet
+        wallet: { create: { balance: 0 } }, // ✅ Ensure wallet is created
       },
       include: { wallet: true },
     });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.json({ token, user });
+    res.json({ message: "User registered successfully", user });
   } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ error: "Signup failed" });
+    console.error("Register error:", err);
+    res.status(400).json({ error: "Signup failed" });
+  }
+});
+
+// --- Login ---
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+
+    res.json({ token });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// --- Change Password ---
+router.post("/change-password", authenticateToken, async (req, res) => {
+  try {
+    const { current, new: newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const valid = await bcrypt.compare(current, user.password);
+    if (!valid) return res.status(400).json({ error: "Current password incorrect" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed },
+    });
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ error: "Password change failed" });
   }
 });
 
