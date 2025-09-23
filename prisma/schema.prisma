@@ -8,7 +8,7 @@ datasource db {
 }
 
 model User {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String        @id @default(uuid())
   email       String        @unique
   password    String
   name        String
@@ -21,14 +21,14 @@ model User {
 }
 
 model Wallet {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid())   // ✅ keep String, no @db.Uuid
   balance   Float    @default(0)
-  userId    String   @unique @db.Uuid
+  userId    String   @unique                // ✅ keep String, no @db.Uuid
   user      User     @relation(fields: [userId], references: [id])
 }
 
 model InvestmentPlan {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String        @id @default(uuid())
   name        String        @unique
   description String?
   minAmount   Float
@@ -39,25 +39,25 @@ model InvestmentPlan {
 }
 
 model Investment {
-  id        String          @id @default(uuid()) @db.Uuid
+  id        String          @id @default(uuid())
   amount    Float
   status    String          @default("active")
   startDate DateTime        @default(now())
   endDate   DateTime
-  userId    String          @db.Uuid
+  userId    String
   user      User            @relation(fields: [userId], references: [id])
-  planId    String          @db.Uuid
+  planId    String
   plan      InvestmentPlan  @relation(fields: [planId], references: [id])
 }
 
 model Transaction {
-  id            String   @id @default(uuid()) @db.Uuid
-  type          String   // deposit | withdraw
-  amount        Float
-  method        String
+  id           String   @id @default(uuid())
+  type         String
+  amount       Float
+  method       String
   walletAddress String?
-  status        String   @default("pending")
-  createdAt     DateTime @default(now())
-  userId        String   @db.Uuid
-  user          User     @relation(fields: [userId], references: [id])
+  status       String   @default("pending")
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
 }
