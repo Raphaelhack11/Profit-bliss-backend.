@@ -1,15 +1,14 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
-import { authenticateToken as authMiddleware } from "../middleware/auth.js"; // 👈 alias here
+import { authenticateToken as authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Create a deposit request
+// ===== DEPOSIT =====
 router.post("/deposit", authMiddleware, async (req, res) => {
   try {
     const { amount, method } = req.body;
-
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid amount" });
     }
@@ -31,11 +30,10 @@ router.post("/deposit", authMiddleware, async (req, res) => {
   }
 });
 
-// Create a withdraw request
+// ===== WITHDRAW =====
 router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     const { amount, method, walletAddress } = req.body;
-
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid amount" });
     }
@@ -71,7 +69,7 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
   }
 });
 
-// Get all transactions for logged-in user
+// ===== GET TRANSACTIONS =====
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const txs = await prisma.transaction.findMany({
