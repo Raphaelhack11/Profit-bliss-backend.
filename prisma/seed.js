@@ -1,79 +1,46 @@
-// prisma/seed.js
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Default Investment Plans
-  const plans = [
-    {
-      name: "Basic Plan",
-      description: "Entry-level investment plan.",
-      minAmount: 100,
-      roi: 10,
-      duration: 7,
-    },
-    {
-      name: "Master Plan",
-      description: "Higher return for serious investors.",
-      minAmount: 500,
-      roi: 25,
-      duration: 30,
-    },
-    {
-      name: "Ranking Plan",
-      description: "Exclusive plan with the best ROI.",
-      minAmount: 1000,
-      roi: 50,
-      duration: 60,
-    },
-  ];
+  // Clear old plans (optional, if you don’t want duplicates)
+  await prisma.investmentPlan.deleteMany();
 
-  for (const plan of plans) {
-    await prisma.investmentPlan.upsert({
-      where: { name: plan.name },
-      update: {},
-      create: plan,
-    });
-  }
-
-  console.log("✅ Default investment plans seeded successfully!");
-
-  // Default Admin User
-  const adminEmail = "admin@profitbliss.com";
-  const adminPassword = "Admin123"; // Change later in production
-  const hashedPassword = await bcrypt.hash(adminPassword, 10);
-
-  const adminUser = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {},
-    create: {
-      email: adminEmail,
-      password: hashedPassword,
-      name: "Admin User",
-      country: "Nigeria",
-      phone: "+2340000000000",
-      wallet: {
-        create: {
-          balance: 0,
-        },
+  // Seed new plans
+  await prisma.investmentPlan.createMany({
+    data: [
+      {
+        name: "Starter Plan",
+        description: "Beginner friendly plan for small investors",
+        minAmount: 100,
+        roi: 30,          // 5% return
+        duration: 7,     // 7 days
       },
-    },
-    include: { wallet: true },
+      {
+        name: "Standard Plan",
+        description: "Balanced plan with medium returns",
+        minAmount: 500,
+        roi: 50,         // 10% return
+        duration: 14,    // 14 days
+      },
+      {
+        name: "Premium Plan",
+        description: "High return plan for serious investors",
+        minAmount: 1000,
+        roi: 75,         // 20% return
+        duration: 30,    // 30 days
+      },
+    ],
   });
 
-  console.log("✅ Default admin user created:");
-  console.log({
-    email: adminUser.email,
-    password: adminPassword,
-  });
+  console.log("✅ Investment Plans seeded successfully!");
 }
 
 main()
-  .then(() => prisma.$disconnect())
   .catch((e) => {
-    console.error(e);
-    prisma.$disconnect();
+    console.error("❌ Error seeding data:", e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
