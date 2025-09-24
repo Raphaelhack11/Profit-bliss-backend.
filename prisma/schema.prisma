@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  password     String
-  name         String
-  country      String
-  phone        String
-  role         Role          @default(USER)   // 👈 add role
-  wallet       Wallet?
-  investments  Investment[]
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  name        String
+  country     String
+  phone       String
+  wallet      Wallet?
+  investments Investment[]
   transactions Transaction[]
-  createdAt    DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+
+  role        String        @default("user")  // 👈 added back for admin system
 }
 
 model Wallet {
@@ -61,9 +62,4 @@ model Transaction {
   userId        String
   user          User     @relation(fields: [userId], references: [id])
   createdAt     DateTime @default(now())
-}
-
-enum Role {
-  USER
-  ADMIN
 }
