@@ -1,4 +1,3 @@
-// src/middleware/auth.js
 import jwt from "jsonwebtoken";
 
 export function authenticateToken(req, res, next) {
@@ -13,15 +12,15 @@ export function authenticateToken(req, res, next) {
     if (err) {
       return res.status(403).json({ error: "Invalid or expired token" });
     }
-    req.user = user; // payload contains id, email, role, etc.
+    req.user = user; // contains id, email, role
     next();
   });
 }
 
-// ✅ Admin-only middleware
+// ✅ Only admins can pass
 export function requireAdmin(req, res, next) {
   if (req.user?.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admins only." });
   }
   next();
-        }
+}
