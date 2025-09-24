@@ -14,12 +14,11 @@ model User {
   name        String
   country     String
   phone       String
+  role        String        @default("user")   // ✅ Added role field
   wallet      Wallet?
   investments Investment[]
   transactions Transaction[]
   createdAt   DateTime      @default(now())
-
-  role        String        @default("user")  // 👈 added back for admin system
 }
 
 model Wallet {
@@ -53,13 +52,13 @@ model Investment {
 }
 
 model Transaction {
-  id            String   @id @default(uuid())
-  type          String
-  amount        Float
-  method        String
+  id           String   @id @default(uuid())
+  type         String
+  amount       Float
+  method       String
   walletAddress String?
-  status        String   @default("pending")
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  createdAt     DateTime @default(now())
+  status       String   @default("pending")
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
 }
