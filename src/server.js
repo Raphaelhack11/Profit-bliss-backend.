@@ -4,7 +4,10 @@ import dotenv from "dotenv";
 
 import authRoutes from "./routes/auth.js";
 import transactionRoutes from "./routes/transactions.js";
-import "./jobs/cron.js"; // 👈 load cron job
+import walletRoutes from "./routes/wallet.js";   // ✅ add
+import planRoutes from "./routes/plans.js";       // ✅ add
+import investmentRoutes from "./routes/investments.js"; // ✅ add
+import "./jobs/cron.js";
 
 dotenv.config();
 const app = express();
@@ -19,6 +22,9 @@ app.get("/", (req, res) => {
 // routes
 app.use("/auth", authRoutes);
 app.use("/transactions", transactionRoutes);
+app.use("/wallet", walletRoutes);          // ✅ mount
+app.use("/plans", planRoutes);             // ✅ mount
+app.use("/investments", investmentRoutes); // ✅ mount
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
