@@ -1,4 +1,3 @@
-// src/routes/auth.js
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -29,7 +28,8 @@ router.post("/register", async (req, res) => {
         password: hashedPassword,
         country,
         phone,
-        wallet: { create: { balance: 0 } }, // ✅ Ensure wallet is created
+        role: "user", // 👈 default role
+        wallet: { create: { balance: 0 } },
       },
       include: { wallet: true },
     });
@@ -52,9 +52,17 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+    // 👇 token includes role
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-    res.json({ token });
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role, name: user.name },
+    });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Login failed" });
