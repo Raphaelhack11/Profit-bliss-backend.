@@ -8,6 +8,7 @@ import walletRoutes from "./routes/wallet.js";   // ✅ add
 import planRoutes from "./routes/plans.js";       // ✅ add
 import investmentRoutes from "./routes/investments.js"; // ✅ add
 import "./jobs/cron.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 const app = express();
@@ -25,6 +26,7 @@ app.use("/transactions", transactionRoutes);
 app.use("/wallet", walletRoutes);          // ✅ mount
 app.use("/plans", planRoutes);             // ✅ mount
 app.use("/investments", investmentRoutes); // ✅ mount
+app.use("/admin", adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
