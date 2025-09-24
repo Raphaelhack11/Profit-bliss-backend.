@@ -1,12 +1,13 @@
 // prisma/seed.js
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Example investment plans
+  // 1. Create example investment plans
   const plans = [
     {
       name: "Starter Plan",
@@ -39,7 +40,25 @@ async function main() {
     });
   }
 
-  console.log("✅ Seeding completed.");
+  // 2. Create admin user if it doesn’t exist
+  const adminEmail = "admin@profitbliss.org";
+  const adminPassword = await bcrypt.hash("Admin123!", 10); // 👈 change this after first login
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {},
+    create: {
+      email: adminEmail,
+      password: adminPassword,
+      name: "System Admin",
+      country: "N/A",
+      phone: "0000000000",
+      role: "admin", // 👈 only seed.js should create admins
+      wallet: { create: { balance: 0 } },
+    },
+  });
+
+  console.log("✅ Seeding completed (plans + admin).");
 }
 
 main()
