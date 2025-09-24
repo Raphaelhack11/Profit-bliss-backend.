@@ -1,39 +1,45 @@
+// prisma/seed.js
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clear old plans (optional, if you don’t want duplicates)
-  await prisma.investmentPlan.deleteMany();
+  console.log("🌱 Seeding database...");
 
-  // Seed new plans
-  await prisma.investmentPlan.createMany({
-    data: [
-      {
-        name: "Starter Plan",
-        description: "Beginner friendly plan for small investors",
-        minAmount: 100,
-        roi: 30,          // 5% return
-        duration: 7,     // 7 days
-      },
-      {
-        name: "Standard Plan",
-        description: "Balanced plan with medium returns",
-        minAmount: 500,
-        roi: 50,         // 10% return
-        duration: 14,    // 14 days
-      },
-      {
-        name: "Premium Plan",
-        description: "High return plan for serious investors",
-        minAmount: 1000,
-        roi: 75,         // 20% return
-        duration: 30,    // 30 days
-      },
-    ],
-  });
+  // Example investment plans
+  const plans = [
+    {
+      name: "Starter Plan",
+      description: "Perfect for beginners",
+      minAmount: 100,
+      roi: 10,
+      duration: 30,
+    },
+    {
+      name: "Pro Plan",
+      description: "For consistent investors",
+      minAmount: 500,
+      roi: 15,
+      duration: 60,
+    },
+    {
+      name: "Elite Plan",
+      description: "High ROI for big investors",
+      minAmount: 1000,
+      roi: 20,
+      duration: 90,
+    },
+  ];
 
-  console.log("✅ Investment Plans seeded successfully!");
+  for (const plan of plans) {
+    await prisma.investmentPlan.upsert({
+      where: { name: plan.name },
+      update: {},
+      create: plan,
+    });
+  }
+
+  console.log("✅ Seeding completed.");
 }
 
 main()
