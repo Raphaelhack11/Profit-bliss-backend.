@@ -8,22 +8,23 @@ datasource db {
 }
 
 model User {
-  id          String        @id @default(uuid())
-  email       String        @unique
-  password    String
-  name        String
-  country     String
-  phone       String
-  wallet      Wallet?
-  investments Investment[]
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  name         String
+  country      String
+  phone        String
+  role         Role          @default(USER)   // 👈 add role
+  wallet       Wallet?
+  investments  Investment[]
   transactions Transaction[]
-  createdAt   DateTime      @default(now())
+  createdAt    DateTime      @default(now())
 }
 
 model Wallet {
-  id        String   @id @default(uuid())   // ✅ keep String, no @db.Uuid
+  id        String   @id @default(uuid())
   balance   Float    @default(0)
-  userId    String   @unique                // ✅ keep String, no @db.Uuid
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
 }
 
@@ -51,13 +52,18 @@ model Investment {
 }
 
 model Transaction {
-  id           String   @id @default(uuid())
-  type         String
-  amount       Float
-  method       String
+  id            String   @id @default(uuid())
+  type          String
+  amount        Float
+  method        String
   walletAddress String?
-  status       String   @default("pending")
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  createdAt    DateTime @default(now())
+  status        String   @default("pending")
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
 }
