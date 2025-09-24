@@ -24,18 +24,24 @@ router.post(
   authenticateToken,
   requireAdmin,
   async (req, res) => {
-    const { id } = req.params;
-    const tx = await prisma.transaction.update({
-      where: { id: parseInt(id) },
-      data: { status: "approved" },
-    });
+    try {
+      const { id } = req.params;
 
-    await prisma.wallet.update({
-      where: { userId: tx.userId },
-      data: { balance: { increment: tx.amount } },
-    });
+      const tx = await prisma.transaction.update({
+        where: { id }, // ✅ string, not parseInt
+        data: { status: "approved" },
+      });
 
-    res.json({ message: "Deposit approved ✅", tx });
+      await prisma.wallet.update({
+        where: { userId: tx.userId },
+        data: { balance: { increment: tx.amount } },
+      });
+
+      res.json({ message: "Deposit approved ✅", tx });
+    } catch (err) {
+      console.error("Approve deposit error:", err);
+      res.status(500).json({ error: "Failed to approve deposit" });
+    }
   }
 );
 
@@ -47,12 +53,19 @@ router.post(
   authenticateToken,
   requireAdmin,
   async (req, res) => {
-    const { id } = req.params;
-    const tx = await prisma.transaction.update({
-      where: { id: parseInt(id) },
-      data: { status: "rejected" },
-    });
-    res.json({ message: "Deposit rejected ❌", tx });
+    try {
+      const { id } = req.params;
+
+      const tx = await prisma.transaction.update({
+        where: { id }, // ✅ string, not parseInt
+        data: { status: "rejected" },
+      });
+
+      res.json({ message: "Deposit rejected ❌", tx });
+    } catch (err) {
+      console.error("Reject deposit error:", err);
+      res.status(500).json({ error: "Failed to reject deposit" });
+    }
   }
 );
 
@@ -64,12 +77,17 @@ router.get(
   authenticateToken,
   requireAdmin,
   async (req, res) => {
-    const withdrawals = await prisma.transaction.findMany({
-      where: { type: "withdraw" },
-      include: { user: true },
-      orderBy: { createdAt: "desc" },
-    });
-    res.json(withdrawals);
+    try {
+      const withdrawals = await prisma.transaction.findMany({
+        where: { type: "withdraw" },
+        include: { user: true },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json(withdrawals);
+    } catch (err) {
+      console.error("Get withdrawals error:", err);
+      res.status(500).json({ error: "Failed to fetch withdrawals" });
+    }
   }
 );
 
@@ -81,12 +99,19 @@ router.post(
   authenticateToken,
   requireAdmin,
   async (req, res) => {
-    const { id } = req.params;
-    const tx = await prisma.transaction.update({
-      where: { id: parseInt(id) },
-      data: { status: "approved" },
-    });
-    res.json({ message: "Withdrawal approved ✅", tx });
+    try {
+      const { id } = req.params;
+
+      const tx = await prisma.transaction.update({
+        where: { id }, // ✅ string, not parseInt
+        data: { status: "approved" },
+      });
+
+      res.json({ message: "Withdrawal approved ✅", tx });
+    } catch (err) {
+      console.error("Approve withdrawal error:", err);
+      res.status(500).json({ error: "Failed to approve withdrawal" });
+    }
   }
 );
 
@@ -98,18 +123,24 @@ router.post(
   authenticateToken,
   requireAdmin,
   async (req, res) => {
-    const { id } = req.params;
-    const tx = await prisma.transaction.update({
-      where: { id: parseInt(id) },
-      data: { status: "rejected" },
-    });
+    try {
+      const { id } = req.params;
 
-    await prisma.wallet.update({
-      where: { userId: tx.userId },
-      data: { balance: { increment: tx.amount } },
-    });
+      const tx = await prisma.transaction.update({
+        where: { id }, // ✅ string, not parseInt
+        data: { status: "rejected" },
+      });
 
-    res.json({ message: "Withdrawal rejected & refunded ❌💰", tx });
+      await prisma.wallet.update({
+        where: { userId: tx.userId },
+        data: { balance: { increment: tx.amount } },
+      });
+
+      res.json({ message: "Withdrawal rejected & refunded ❌💰", tx });
+    } catch (err) {
+      console.error("Reject withdrawal error:", err);
+      res.status(500).json({ error: "Failed to reject withdrawal" });
+    }
   }
 );
 
