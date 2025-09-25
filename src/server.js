@@ -4,28 +4,38 @@ import dotenv from "dotenv";
 
 import authRoutes from "./routes/auth.js";
 import transactionRoutes from "./routes/transactions.js";
-import walletRoutes from "./routes/wallet.js";   // ✅ add
-import planRoutes from "./routes/plans.js";       // ✅ add
-import investmentRoutes from "./routes/investments.js"; // ✅ add
-import "./jobs/cron.js";
+import walletRoutes from "./routes/wallet.js";
+import planRoutes from "./routes/plans.js";
+import investmentRoutes from "./routes/investments.js";
 import adminRoutes from "./routes/admin.js";
+
+import "./jobs/cron.js";
 
 dotenv.config();
 const app = express();
 
-app.use(cors());
+// ✅ Allow frontend on Vercel + localhost during dev
+app.use(cors({
+  origin: [
+    "http://localhost:5173", // Vite dev
+    "https://profit-bliss-org-us.vercel.app/" // Replace with your real Vercel URL
+  ],
+  credentials: true,
+}));
+
 app.use(express.json());
 
+// Health check
 app.get("/", (req, res) => {
-  res.send("🚀 API is running");
+  res.send("🚀 API is running on Render");
 });
 
-// routes
+// Routes
 app.use("/auth", authRoutes);
 app.use("/transactions", transactionRoutes);
-app.use("/wallet", walletRoutes);          // ✅ mount
-app.use("/plans", planRoutes);             // ✅ mount
-app.use("/investments", investmentRoutes); // ✅ mount
+app.use("/wallet", walletRoutes);
+app.use("/plans", planRoutes);
+app.use("/investments", investmentRoutes);
 app.use("/admin", adminRoutes);
 
 const PORT = process.env.PORT || 5000;
