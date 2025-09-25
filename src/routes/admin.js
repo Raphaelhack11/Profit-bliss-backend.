@@ -128,4 +128,67 @@ router.post("/withdrawals/:id/reject", authenticateToken, requireAdmin, async (r
   }
 });
 
-export default router;
+// ====================
+// Investment Plans CRUD
+// ====================
+
+// Get all plans
+router.get("/plans", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const plans = await prisma.investmentPlan.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(plans);
+  } catch (err) {
+    console.error("Get plans error:", err);
+    res.status(500).json({ error: "Failed to fetch plans" });
+  }
+});
+
+// Create new plan
+router.post("/plans", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, description, minAmount, roi, duration } = req.body;
+
+    const newPlan = await prisma.investmentPlan.create({
+      data: { name, description, minAmount, roi, duration },
+    });
+
+    res.json({ message: "Plan created ✅", plan: newPlan });
+  } catch (err) {
+    console.error("Create plan error:", err);
+    res.status(500).json({ error: "Failed to create plan" });
+  }
+});
+
+// Update a plan
+router.put("/plans/:id", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, minAmount, roi, duration } = req.body;
+
+    const updatedPlan = await prisma.investmentPlan.update({
+      where: { id },
+      data: { name, description, minAmount, roi, duration },
+    });
+
+    res.json({ message: "Plan updated ✏️", plan: updatedPlan });
+  } catch (err) {
+    console.error("Update plan error:", err);
+    res.status(500).json({ error: "Failed to update plan" });
+  }
+});
+
+// Delete a plan
+router.delete("/plans/:id", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.investmentPlan.delete({ where: { id } });
+
+    res.json({ message: "Plan deleted 🗑️" });
+  } catch (err) {
+    console.error("Delete plan error:", err);
+    res.status(500).json({ error: "Failed to delete plan" });
+  }
+});                        
