@@ -23,4 +23,4 @@ export function requireAdmin(req, res, next) {
     return res.status(403).json({ error: "Access denied. Admins only." });
   }
   next();
-}
+    }
