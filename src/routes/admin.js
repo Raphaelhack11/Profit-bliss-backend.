@@ -8,9 +8,9 @@ const router = express.Router();
 // Helper to safely parse ID (works for String or Int PKs)
 const parseId = (id) => (isNaN(id) ? id : parseInt(id));
 
-// ====================
-// Get all deposits
-// ====================
+/* ============================
+   DEPOSITS
+============================ */
 router.get("/deposits", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const deposits = await prisma.transaction.findMany({
@@ -25,9 +25,6 @@ router.get("/deposits", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-// ====================
-// Approve deposit
-// ====================
 router.post("/deposits/:id/approve", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const txId = parseId(req.params.id);
@@ -49,9 +46,6 @@ router.post("/deposits/:id/approve", authenticateToken, requireAdmin, async (req
   }
 });
 
-// ====================
-// Reject deposit
-// ====================
 router.post("/deposits/:id/reject", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const txId = parseId(req.params.id);
@@ -68,9 +62,9 @@ router.post("/deposits/:id/reject", authenticateToken, requireAdmin, async (req,
   }
 });
 
-// ====================
-// Get all withdrawals
-// ====================
+/* ============================
+   WITHDRAWALS
+============================ */
 router.get("/withdrawals", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const withdrawals = await prisma.transaction.findMany({
@@ -85,9 +79,6 @@ router.get("/withdrawals", authenticateToken, requireAdmin, async (req, res) => 
   }
 });
 
-// ====================
-// Approve withdrawal
-// ====================
 router.post("/withdrawals/:id/approve", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const txId = parseId(req.params.id);
@@ -104,9 +95,6 @@ router.post("/withdrawals/:id/approve", authenticateToken, requireAdmin, async (
   }
 });
 
-// ====================
-// Reject withdrawal (refund user)
-// ====================
 router.post("/withdrawals/:id/reject", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const txId = parseId(req.params.id);
@@ -128,10 +116,9 @@ router.post("/withdrawals/:id/reject", authenticateToken, requireAdmin, async (r
   }
 });
 
-// ====================
-// Investment Plans CRUD
-// ====================
-
+/* ============================
+   INVESTMENT PLANS (CRUD)
+============================ */
 // Get all plans
 router.get("/plans", authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -151,44 +138,60 @@ router.post("/plans", authenticateToken, requireAdmin, async (req, res) => {
     const { name, description, minAmount, roi, duration } = req.body;
 
     const newPlan = await prisma.investmentPlan.create({
-      data: { name, description, minAmount, roi, duration },
+      data: {
+        name,
+        description,
+        minAmount: parseFloat(minAmount),
+        roi: parseFloat(roi),
+        duration: parseInt(duration),
+      },
     });
 
-    res.json({ message: "Plan created ✅", plan: newPlan });
+    res.json({ message: "Plan created ✅", newPlan });
   } catch (err) {
     console.error("Create plan error:", err);
     res.status(500).json({ error: "Failed to create plan" });
   }
 });
 
-// Update a plan
+// Update plan
 router.put("/plans/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const planId = parseId(req.params.id);
     const { name, description, minAmount, roi, duration } = req.body;
 
     const updatedPlan = await prisma.investmentPlan.update({
-      where: { id },
-      data: { name, description, minAmount, roi, duration },
+      where: { id: planId },
+      data: {
+        name,
+        description,
+        minAmount: parseFloat(minAmount),
+        roi: parseFloat(roi),
+        duration: parseInt(duration),
+      },
     });
 
-    res.json({ message: "Plan updated ✏️", plan: updatedPlan });
+    res.json({ message: "Plan updated ✅", updatedPlan });
   } catch (err) {
     console.error("Update plan error:", err);
     res.status(500).json({ error: "Failed to update plan" });
   }
 });
 
-// Delete a plan
+// Delete plan
 router.delete("/plans/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const planId = parseId(req.params.id);
 
-    await prisma.investmentPlan.delete({ where: { id } });
+    await prisma.investmentPlan.delete({
+      where: { id: planId },
+    });
 
-    res.json({ message: "Plan deleted 🗑️" });
+    res.json({ message: "Plan deleted ❌" });
   } catch (err) {
     console.error("Delete plan error:", err);
     res.status(500).json({ error: "Failed to delete plan" });
   }
-});                        
+});
+
+export default router;
