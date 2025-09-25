@@ -18,7 +18,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:5173", // Vite dev
-    "https://profit-bliss-org-us.vercel.app/" // Replace with your real Vercel URL
+    "https://profit-bliss-org-us.vercel.app" // Replace with your real Vercel URL
   ],
   credentials: true,
 }));
