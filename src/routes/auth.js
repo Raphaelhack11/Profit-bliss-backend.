@@ -8,8 +8,8 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
-// --- Register ---
-router.post("/register", async (req, res) => {
+// --- Register / Signup ---
+router.post(["/register", "/signup"], async (req, res) => {
   try {
     const { name, email, password, country, phone } = req.body;
 
@@ -28,15 +28,24 @@ router.post("/register", async (req, res) => {
         password: hashedPassword,
         country,
         phone,
-        role: "user", // 👈 default role
+        role: "user", // default role
         wallet: { create: { balance: 0 } },
       },
-      include: { wallet: true },
     });
 
-    res.json({ message: "User registered successfully", user });
+    // create token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role, name: user.name },
+    });
   } catch (err) {
-    console.error("Register error:", err);
+    console.error("Signup error:", err);
     res.status(400).json({ error: "Signup failed" });
   }
 });
@@ -52,7 +61,7 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-    // 👇 token includes role
+    // token includes role
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       JWT_SECRET,
