@@ -12,7 +12,7 @@ export async function sendVerificationEmail(to, code) {
   const msg = {
     to,
     from: "equigrowinc@gmail.com", // must be a verified sender in SendGrid
-    subject: "Your Profit Bliss Verification Code",
+    subject: "Your Equi Grow Verification Code",
     text: `Your verification code is ${code}`,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
