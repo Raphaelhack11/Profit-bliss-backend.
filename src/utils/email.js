@@ -1,7 +1,7 @@
 import sgMail from "@sendgrid/mail";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const SENDER_EMAIL = process.env.SENDER_EMAIL || "profitblissmail@gmail.com";
+const SENDER_EMAIL = process.env.SENDER_EMAIL || "equigrowinc@gmail.com";
 
 sgMail.setApiKey(SENDGRID_API_KEY);
 
