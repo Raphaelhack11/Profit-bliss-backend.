@@ -1,20 +1,34 @@
-// sendgridTest.js
+// src/utils/email.js
 import sgMail from "@sendgrid/mail";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const msg = {
-  to: "yourpersonalemail@example.com",
-  from: process.env.SENDER_EMAIL,
-  subject: "SendGrid Test Email",
-  text: "Hello, this is a test email from SendGrid!",
-  html: "<strong>Hello, this is a test email from SendGrid!</strong>",
-};
+/**
+ * Sends a verification code email
+ * @param {string} to - recipient email
+ * @param {string} code - the OTP code
+ */
+export async function sendVerificationEmail(to, code) {
+  const msg = {
+    to,
+    from: "equigrowinc@gmail.com", // must be a verified sender in SendGrid
+    subject: "Your Profit Bliss Verification Code",
+    text: `Your verification code is ${code}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Profit Bliss Verification</h2>
+        <p>Your one-time verification code is:</p>
+        <h1 style="color: #4F46E5;">${code}</h1>
+        <p>This code expires in 10 minutes.</p>
+      </div>
+    `,
+  };
 
-sgMail
-  .send(msg)
-  .then(() => console.log("✅ Email sent"))
-  .catch((err) => console.error("❌ Error:", err));
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ Verification email sent to ${to}`);
+  } catch (err) {
+    console.error("❌ SendGrid email error:", err.response?.body || err);
+    throw new Error("Failed to send verification email");
+  }
+}
