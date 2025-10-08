@@ -16,13 +16,14 @@ function generateOTP() {
 
 // --- REGISTER / SIGNUP ---
 router.post(["/register", "/signup"], async (req, res) => {
+  const { name, email, password, country, phone } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
   try {
-    const { name, email, password, country, phone } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
-
+    // ✅ Check existing user
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({ error: "Email already registered" });
@@ -30,9 +31,21 @@ router.post(["/register", "/signup"], async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-    const user = await prisma.user.create({
+    // ✅ First: Try sending email before creating user
+    try {
+      await sendVerificationEmail(email, otp);
+    } catch (emailError) {
+      console.error("❌ Failed to send verification email:", emailError);
+      return res.status(500).json({
+        error:
+          "Could not send verification email. Please check your email address or try again later.",
+      });
+    }
+
+    // ✅ Create user only if email sent successfully
+    await prisma.user.create({
       data: {
         name,
         email,
@@ -46,9 +59,6 @@ router.post(["/register", "/signup"], async (req, res) => {
         wallet: { create: { balance: 0 } },
       },
     });
-
-    // Send OTP via SendGrid
-    await sendVerificationEmail(user.email, otp);
 
     res.json({
       message: "Signup successful. Verification code sent to your email.",
