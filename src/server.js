@@ -15,14 +15,25 @@ dotenv.config();
 const app = express();
 
 // ✅ Allow frontend on Vercel + localhost during dev
-app.use(cors({
-  origin: [
-    "http://localhost:5173", // Vite dev
-    "https://profit-bliss-org-us.vercel.app" // Replace with your real Vercel URL
-  ],
-  credentials: true,
-}));
+const allowedOrigins = [
+  "http://localhost:5173",            // Vite dev
+  "https://equigrowinc.vercel.app",   // ✅ your new frontend domain
+];
 
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// Middleware
 app.use(express.json());
 
 // Health check
