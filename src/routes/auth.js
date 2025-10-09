@@ -14,16 +14,15 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/* ==============================================================
-   SIGNUP / REGISTER
-================================================================*/
+// --- REGISTER / SIGNUP ---
 router.post(["/register", "/signup"], async (req, res) => {
   try {
     const { name, email, password, country, phone } = req.body;
-    console.log("➡️ Signup attempt:", email);
+
+    console.log("📨 Incoming signup request:", req.body);
 
     if (!name || !email || !password) {
-      console.log("⚠️ Missing required fields");
+      console.log("❌ Missing fields");
       return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -36,8 +35,6 @@ router.post(["/register", "/signup"], async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
-
-    console.log("🌀 Creating user in database...");
 
     const user = await prisma.user.create({
       data: {
@@ -54,121 +51,118 @@ router.post(["/register", "/signup"], async (req, res) => {
       },
     });
 
-    console.log("✅ User created:", user.email);
+    console.log("✅ User created:", user.email, "Sending OTP:", otp);
 
-    // Send OTP via SendGrid
-    console.log("📧 Sending verification email...");
-    await sendVerificationEmail(user.email, otp);
-    console.log("✅ Verification email sent!");
+    try {
+      await sendVerificationEmail(user.email, otp);
+      console.log("✅ Verification email sent successfully");
+    } catch (emailErr) {
+      console.error("❌ Email send failed:", emailErr);
+      return res
+        .status(500)
+        .json({ error: "Could not send verification email. Please try again." });
+    }
 
     res.json({
-      message: "Signup successful. Verification code sent to your email 📩",
+      message: "Signup successful. Verification code sent to your email.",
     });
   } catch (err) {
     console.error("❌ Signup error:", err);
-    res.status(500).json({ error: "Signup failed" });
+    res.status(500).json({ error: "Signup failed. Try again later." });
   }
 });
 
-/* ==============================================================
-   VERIFY EMAIL (OTP)
-================================================================*/
+// --- VERIFY OTP ---
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, code } = req.body;
-    console.log("➡️ OTP verification attempt for:", email, "Code:", code);
+
+    console.log("🔍 Verifying OTP for:", email, "Code:", code);
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      console.log("❌ User not found for OTP verification");
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (user.isVerified) {
-      console.log("✅ Already verified:", email);
+    if (user.isVerified)
       return res.json({ message: "Account already verified ✅" });
-    }
 
-    if (user.otpCode !== code) {
-      console.log("❌ Invalid code for:", email);
+    if (user.otpCode !== code)
       return res.status(400).json({ error: "Invalid verification code" });
-    }
 
-    if (user.otpExpires < new Date()) {
-      console.log("❌ OTP expired for:", email);
+    if (user.otpExpires < new Date())
       return res.status(400).json({ error: "Verification code expired" });
-    }
 
     await prisma.user.update({
       where: { email },
       data: { isVerified: true, otpCode: null, otpExpires: null },
     });
 
-    console.log("✅ Email verified successfully for:", email);
+    console.log("✅ Email verified for:", email);
+
     res.json({ message: "✅ Email verified successfully!" });
   } catch (err) {
-    console.error("❌ OTP verification error:", err);
+    console.error("❌ Verify OTP error:", err);
     res.status(500).json({ error: "OTP verification failed" });
   }
 });
 
-/* ==============================================================
-   RESEND VERIFICATION CODE
-================================================================*/
-router.post("/resend-otp", async (req, res) => {
+// --- RESEND VERIFICATION CODE ---
+router.post("/resend-verification", async (req, res) => {
   try {
     const { email } = req.body;
-    console.log("➡️ Resend OTP requested for:", email);
+    console.log("🔁 Resending OTP to:", email);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (user.isVerified) {
+    if (user.isVerified)
       return res.json({ message: "Account already verified ✅" });
-    }
 
-    const newOTP = generateOTP();
-    const newExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     await prisma.user.update({
       where: { email },
-      data: { otpCode: newOTP, otpExpires: newExpiry },
+      data: { otpCode: otp, otpExpires: otpExpiry },
     });
 
-    console.log("📧 Resending verification email...");
-    await sendVerificationEmail(user.email, newOTP);
-    console.log("✅ Verification email re-sent!");
-
-    res.json({ message: "A new verification code has been sent to your email 📩" });
+    try {
+      await sendVerificationEmail(email, otp);
+      console.log("✅ Verification email re-sent");
+      res.json({ message: "Verification code resent successfully!" });
+    } catch (emailErr) {
+      console.error("❌ Email resend failed:", emailErr);
+      res.status(500).json({ error: "Failed to resend verification email." });
+    }
   } catch (err) {
     console.error("❌ Resend OTP error:", err);
-    res.status(500).json({ error: "Failed to resend verification email" });
+    res.status(500).json({ error: "Could not resend code." });
   }
 });
 
-/* ==============================================================
-   LOGIN
-================================================================*/
+// --- LOGIN ---
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log("➡️ Login attempt:", email);
+
+    console.log("🔐 Login attempt:", email);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      console.log("❌ User not found:", email);
+      console.log("❌ Invalid email");
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      console.log("❌ Invalid password for:", email);
+      console.log("❌ Wrong password");
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     if (!user.isVerified) {
-      console.log("⚠️ Unverified user tried to login:", email);
-      return res.status(403).json({ error: "Please verify your email first" });
+      console.log("⚠️ Email not verified");
+      return res
+        .status(403)
+        .json({ error: "Please verify your email before logging in." });
     }
 
     const token = jwt.sign(
@@ -177,30 +171,31 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    console.log("✅ Login successful:", email);
+    console.log("✅ Login successful for:", email);
 
     res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
         role: user.role,
+        name: user.name,
       },
     });
   } catch (err) {
     console.error("❌ Login error:", err);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({ error: "Login failed. Try again." });
   }
 });
 
-/* ==============================================================
-   CHANGE PASSWORD
-================================================================*/
+// --- CHANGE PASSWORD ---
 router.post("/change-password", authenticateToken, async (req, res) => {
   try {
     const { current, newPassword } = req.body;
-    console.log("➡️ Change password attempt for user:", req.user.id);
+
+    if (!current || !newPassword) {
+      return res.status(400).json({ error: "Both fields are required" });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -210,16 +205,53 @@ router.post("/change-password", authenticateToken, async (req, res) => {
       return res.status(400).json({ error: "Current password is incorrect" });
 
     const hashed = await bcrypt.hash(newPassword, 10);
+
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashed },
     });
 
-    console.log("✅ Password changed for:", user.email);
     res.json({ message: "Password updated successfully ✅" });
   } catch (err) {
     console.error("❌ Change password error:", err);
     res.status(500).json({ error: "Password change failed" });
+  }
+});
+
+/* ==============================================================
+   DEBUG ROUTE (TEMPORARY)
+================================================================*/
+router.get("/debug", async (req, res) => {
+  try {
+    const checks = {};
+
+    // Check environment variables
+    checks.env = {
+      DATABASE_URL: !!process.env.DATABASE_URL,
+      JWT_SECRET: !!process.env.JWT_SECRET,
+      SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+    };
+
+    // Check database connection
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.database = "✅ Connected";
+    } catch (dbErr) {
+      checks.database = "❌ Failed: " + dbErr.message;
+    }
+
+    // Check email sending
+    try {
+      if (!process.env.SENDGRID_API_KEY) throw new Error("Missing SENDGRID_API_KEY");
+      checks.sendgrid = "✅ Key present";
+    } catch (sgErr) {
+      checks.sendgrid = "❌ Error: " + sgErr.message;
+    }
+
+    res.json({ message: "✅ Debug info", checks });
+  } catch (err) {
+    console.error("❌ Debug route error:", err);
+    res.status(500).json({ error: "Debug route failed" });
   }
 });
 
