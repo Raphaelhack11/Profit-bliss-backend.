@@ -14,15 +14,15 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// --- REGISTER / SIGNUP ---
+// --- SIGNUP / REGISTER ---
 router.post(["/register", "/signup"], async (req, res) => {
   try {
     const { name, email, password, country, phone } = req.body;
 
-    console.log("📨 Incoming signup request:", req.body);
+    console.log("📝 Signup attempt for:", email);
 
     if (!name || !email || !password) {
-      console.log("❌ Missing fields");
+      console.log("⚠️ Missing required fields");
       return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -51,20 +51,20 @@ router.post(["/register", "/signup"], async (req, res) => {
       },
     });
 
-    console.log("✅ User created:", user.email, "Sending OTP:", otp);
+    console.log("✅ User created:", user.email);
 
     try {
       await sendVerificationEmail(user.email, otp);
-      console.log("✅ Verification email sent successfully");
+      console.log("📩 Verification email sent to:", email);
     } catch (emailErr) {
-      console.error("❌ Email send failed:", emailErr);
-      return res
-        .status(500)
-        .json({ error: "Could not send verification email. Please try again." });
+      console.error("❌ Failed to send verification email:", emailErr);
+      return res.status(500).json({
+        error: "Could not send verification email. Please try again later.",
+      });
     }
 
     res.json({
-      message: "Signup successful. Verification code sent to your email.",
+      message: "Signup successful! Verification code sent to your email.",
     });
   } catch (err) {
     console.error("❌ Signup error:", err);
@@ -77,7 +77,7 @@ router.post("/verify-otp", async (req, res) => {
   try {
     const { email, code } = req.body;
 
-    console.log("🔍 Verifying OTP for:", email, "Code:", code);
+    console.log("🔍 Verifying OTP for:", email);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -96,26 +96,26 @@ router.post("/verify-otp", async (req, res) => {
       data: { isVerified: true, otpCode: null, otpExpires: null },
     });
 
-    console.log("✅ Email verified for:", email);
+    console.log("✅ Email verified successfully:", email);
 
     res.json({ message: "✅ Email verified successfully!" });
   } catch (err) {
-    console.error("❌ Verify OTP error:", err);
+    console.error("❌ OTP verification error:", err);
     res.status(500).json({ error: "OTP verification failed" });
   }
 });
 
-// --- RESEND VERIFICATION CODE ---
+// --- RESEND VERIFICATION ---
 router.post("/resend-verification", async (req, res) => {
   try {
     const { email } = req.body;
-    console.log("🔁 Resending OTP to:", email);
+
+    console.log("🔁 Resending verification to:", email);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(404).json({ error: "User not found" });
-
     if (user.isVerified)
-      return res.json({ message: "Account already verified ✅" });
+      return res.status(400).json({ error: "Account already verified" });
 
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -127,15 +127,18 @@ router.post("/resend-verification", async (req, res) => {
 
     try {
       await sendVerificationEmail(email, otp);
-      console.log("✅ Verification email re-sent");
-      res.json({ message: "Verification code resent successfully!" });
+      console.log("📩 Verification email resent to:", email);
     } catch (emailErr) {
-      console.error("❌ Email resend failed:", emailErr);
-      res.status(500).json({ error: "Failed to resend verification email." });
+      console.error("❌ Failed to resend verification email:", emailErr);
+      return res.status(500).json({
+        error: "Could not resend verification email. Try again later.",
+      });
     }
+
+    res.json({ message: "Verification code resent to your email 📬" });
   } catch (err) {
-    console.error("❌ Resend OTP error:", err);
-    res.status(500).json({ error: "Could not resend code." });
+    console.error("❌ Resend verification error:", err);
+    res.status(500).json({ error: "Resend verification failed" });
   }
 });
 
@@ -158,7 +161,17 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    if (!user.isVerified) {
+    // ✅ Auto-verify admin accounts
+    if (user.role === "admin" && !user.isVerified) {
+      await prisma.user.update({
+        where: { email },
+        data: { isVerified: true, otpCode: null, otpExpires: null },
+      });
+      console.log("🛠 Admin auto-verified:", email);
+    }
+
+    // ✅ Require verification for normal users
+    if (user.role !== "admin" && !user.isVerified) {
       console.log("⚠️ Email not verified");
       return res
         .status(403)
@@ -211,47 +224,11 @@ router.post("/change-password", authenticateToken, async (req, res) => {
       data: { password: hashed },
     });
 
+    console.log("🔑 Password updated for:", user.email);
     res.json({ message: "Password updated successfully ✅" });
   } catch (err) {
     console.error("❌ Change password error:", err);
     res.status(500).json({ error: "Password change failed" });
-  }
-});
-
-/* ==============================================================
-   DEBUG ROUTE (TEMPORARY)
-================================================================*/
-router.get("/debug", async (req, res) => {
-  try {
-    const checks = {};
-
-    // Check environment variables
-    checks.env = {
-      DATABASE_URL: !!process.env.DATABASE_URL,
-      JWT_SECRET: !!process.env.JWT_SECRET,
-      SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
-    };
-
-    // Check database connection
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      checks.database = "✅ Connected";
-    } catch (dbErr) {
-      checks.database = "❌ Failed: " + dbErr.message;
-    }
-
-    // Check email sending
-    try {
-      if (!process.env.SENDGRID_API_KEY) throw new Error("Missing SENDGRID_API_KEY");
-      checks.sendgrid = "✅ Key present";
-    } catch (sgErr) {
-      checks.sendgrid = "❌ Error: " + sgErr.message;
-    }
-
-    res.json({ message: "✅ Debug info", checks });
-  } catch (err) {
-    console.error("❌ Debug route error:", err);
-    res.status(500).json({ error: "Debug route failed" });
   }
 });
 
